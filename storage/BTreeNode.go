@@ -1,11 +1,19 @@
 package storage
 
-import "golang.org/x/exp/constraints"
+import (
+	"errors"
+	"golang.org/x/exp/constraints"
+)
 
 // T is constrained to ordered types
 type T interface {
-	constraints.Ordered
+	int | string
 }
+
+//func defaultValue[T any]() T {
+//	var defaultVal T
+//	return defaultVal
+//}
 
 type Node[T constraints.Ordered] struct {
 	t    int        // Minimum degree (defines the range for number of keys)
@@ -15,7 +23,7 @@ type Node[T constraints.Ordered] struct {
 	leaf bool       // Is true when node is leaf. Otherwise, false
 }
 
-func NewNode[T constraints.Ordered](t int, leaf bool) *Node[T] {
+func newNode[T constraints.Ordered](t int, leaf bool) *Node[T] {
 	return &Node[T]{
 		t:    t,
 		keys: make([]T, 2*t-1),
@@ -52,7 +60,7 @@ func (node *Node[T]) insertNonFull(key T) {
 
 // Updated splitChild to use the generic type parameter
 func (node *Node[T]) splitChild(i int, y *Node[T]) {
-	z := NewNode[T](y.t, y.leaf)
+	z := newNode[T](y.t, y.leaf)
 	z.n = y.t - 1
 
 	for j := 0; j < y.t-1; j++ {
@@ -81,4 +89,30 @@ func (node *Node[T]) splitChild(i int, y *Node[T]) {
 	node.n++
 
 	y.n = y.t - 1
+
+}
+
+func (node *Node[T]) traverseRec(keys []T) {
+	for i := 0; i < node.n; i++ {
+		if node.leaf {
+			node.C[i].traverseRec(keys)
+		}
+		keys = append(keys, node.keys[i])
+	}
+	if !node.leaf {
+		node.C[node.n].traverseRec(keys)
+	}
+}
+
+func (node *Node[T]) searchRec(key T) (error, *Node[T], int) {
+	for i := 0; i < node.n; i++ {
+		if key > node.keys[i] {
+			continue
+		} else if key == node.keys[i] {
+			return nil, node, i
+		} else {
+			return node.C[i].searchRec(key)
+		}
+	}
+	return errors.New("key does not exist in btree"), nil, 0
 }
