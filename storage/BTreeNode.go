@@ -89,12 +89,11 @@ func (node *Node[T]) splitChild(i int, y *Node[T]) {
 	node.n++
 
 	y.n = y.t - 1
-
 }
 
 func (node *Node[T]) traverseRec(keys []T) {
 	for i := 0; i < node.n; i++ {
-		if node.leaf {
+		if !node.leaf {
 			node.C[i].traverseRec(keys)
 		}
 		keys = append(keys, node.keys[i])
@@ -105,14 +104,20 @@ func (node *Node[T]) traverseRec(keys []T) {
 }
 
 func (node *Node[T]) searchRec(key T) (error, *Node[T], int) {
-	for i := 0; i < node.n; i++ {
+	i := 0
+	for i < node.n {
 		if key > node.keys[i] {
+			i++
 			continue
 		} else if key == node.keys[i] {
 			return nil, node, i
 		} else {
-			return node.C[i].searchRec(key)
+			break
 		}
 	}
-	return errors.New("key does not exist in btree"), nil, 0
+	if node.leaf {
+		return errors.New("key does not exist in btree"), nil, 0
+	} else {
+		return node.C[i].searchRec(key)
+	}
 }

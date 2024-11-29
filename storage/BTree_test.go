@@ -6,7 +6,7 @@ import (
 
 func TestSearch(t *testing.T) {
 	deg := 3
-	btree := NewBTree[int](deg)
+	_, btree := NewBTree[int](deg)
 
 	// Test empty tree
 	if btree.Exists(10) {
@@ -37,7 +37,7 @@ func TestSearch(t *testing.T) {
 
 func TestTraversal(t *testing.T) {
 	deg := 3
-	btree := NewBTree[int](deg)
+	_, btree := NewBTree[int](deg)
 
 	// Test empty tree
 	err, keys := btree.traverse()
@@ -71,7 +71,7 @@ func TestTraversal(t *testing.T) {
 
 func TestStringKeys(t *testing.T) {
 	deg := 3
-	btree := NewBTree[string](deg)
+	_, btree := NewBTree[string](deg)
 
 	// Test string keys
 	strings := []string{"apple", "banana", "cherry", "date", "elderberry"}
@@ -103,7 +103,7 @@ func TestStringKeys(t *testing.T) {
 
 func TestLargeNumberOfKeys(t *testing.T) {
 	deg := 3
-	btree := NewBTree[int](deg)
+	_, btree := NewBTree[int](deg)
 
 	// Insert 100 keys
 	for i := 0; i < 100; i++ {
@@ -134,18 +134,15 @@ func TestLargeNumberOfKeys(t *testing.T) {
 
 func TestMinimumDegreeValidation(t *testing.T) {
 	// Test degrees less than 2
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected panic for minimum degree < 2")
-		}
-	}()
-
-	NewBTree[int](1) // Should panic
+	err, _ := NewBTree[int](1)
+	if err == nil {
+		t.Error("Expected panic for minimum degree < 2")
+	}
 }
 
 func TestNodeFullness(t *testing.T) {
 	deg := 3
-	btree := NewBTree[int](deg)
+	_, btree := NewBTree[int](deg)
 
 	// Insert 2t-1 keys to fill root
 	for i := 0; i < 2*deg-1; i++ {

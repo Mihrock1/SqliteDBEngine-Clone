@@ -10,8 +10,12 @@ type BTree[T constraints.Ordered] struct {
 	t    int
 }
 
-func NewBTree[T constraints.Ordered](t int) *BTree[T] {
-	return &BTree[T]{
+func NewBTree[T constraints.Ordered](t int) (error, *BTree[T]) {
+	if t < 2 {
+		return errors.New("minimum degree must be greater than 2"), nil
+	}
+
+	return nil, &BTree[T]{
 		root: newNode[T](t, true),
 		t:    t,
 	}
