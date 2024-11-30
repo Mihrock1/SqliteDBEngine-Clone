@@ -17,7 +17,7 @@ A lightweight SQLite-inspired database engine implemented in Go. This project is
 
 ### Prerequisites
 
-- [Go](https://golang.org/) (version 1.20 or later)
+- [Go](https://golang.org/) (version 1.22 or later)
 
 ### Installation
 
