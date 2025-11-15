@@ -2,8 +2,9 @@ package storage
 
 import (
 	"errors"
-	"golang.org/x/exp/constraints"
 	"reflect"
+
+	"golang.org/x/exp/constraints"
 )
 
 //func defaultValue[T any]() T {
@@ -11,28 +12,29 @@ import (
 //	return defaultVal
 //}
 
-// TODO: check if m is needed here when it already exists in btree
+// TODO: Can we replace slices with arrays of max keys ?
+// TODO: check if t is needed here when it already exists in btree
 type Node[T constraints.Ordered] struct {
-	m      int        // order of BTree Node
-	n      int        // Current number of keys
-	K      []T        // A slice of keys
-	C      []*Node[T] // A slice of child pointers
-	isLeaf bool       // Is true when node is isLeaf. Otherwise, false
+	t    int        // min Degree of BTree Node
+	n    int        // Current number of keys
+	K    []T        // A slice of keys
+	C    []*Node[T] // A slice of child pointers
+	leaf bool       // Is true when node is leaf. Otherwise, false
 }
 
-func newNode[T constraints.Ordered](order int, leaf bool) *Node[T] {
+func newNode[T constraints.Ordered](minDegree int, leaf bool) *Node[T] {
 	return &Node[T]{
-		m:      order,
-		K:      make([]T, order-1),
-		n:      0,
-		C:      make([]*Node[T], order),
-		isLeaf: leaf,
+		t:    minDegree,
+		K:    make([]T, 2*minDegree-1),
+		n:    0,
+		C:    make([]*Node[T], 2*minDegree),
+		leaf: leaf,
 	}
 }
 
 func (node *Node[T]) insertNonFull(key T) {
 	i := node.n - 1
-	if node.isLeaf {
+	if node.leaf {
 		for i >= 0 && node.K[i] > key {
 			node.K[i+1] = node.K[i]
 			i--
@@ -43,42 +45,56 @@ func (node *Node[T]) insertNonFull(key T) {
 		for i >= 0 && node.K[i] > key {
 			i--
 		}
-		if node.C[i+1].n == node.m-1 {
-			node.splitChild(i+1, node.C[i+1])
 
-			if node.K[i+1] < key {
+		// bring index value back to condition node.K[i] > key
+		i++
+
+		// in case child node is full
+		if node.C[i].n == 2*node.t-1 {
+			//node.splitChild(i + 1)
+			node.splitChild(i)
+
+			// TODO: Check if new logic below works
+			// after split, fix index position if condition not met: node.K[i] > key
+			if node.K[i] < key {
 				i++
 			}
 		}
-		node.C[i+1].insertNonFull(key)
+
+		node.C[i].insertNonFull(key)
 	}
 }
 
 // TODO: check if two params are needed
-func (node *Node[T]) splitChild(i int, child *Node[T]) {
-	newChild := newNode[T](child.m, child.isLeaf)
+func (node *Node[T]) splitChild(i int) {
+	child := node.C[i]
+	newChild := newNode[T](child.t, child.leaf)
 	// TODO: update value of n as key in each node is added or deleted to make debugging easier
-	//newChild.n = child.m - 1
+	//newChild.n = child.t - 1
 
-	for j := 0; j < child.m-1; j++ {
+	var zero T
+
+	for j := 0; j < child.t-1; j++ {
+		// TODO: Check for problems with debugging here
 		// move keys from second half of first child to new child
-		newChild.K[j] = child.K[j+child.m]
+		newChild.K[j] = child.K[j+child.t]
 		newChild.n++
+		child.K[j+child.t] = zero
 		child.n--
 
 		// move child pointers from second half of first child to new child
-		newChild.C[j] = child.C[j+child.m]
-		child.C[j+child.m] = nil
+		newChild.C[j] = child.C[j+child.t]
+		child.C[j+child.t] = nil
 	}
 
 	// for last child pointer not encountered in above loop
-	newChild.C[child.m-1] = child.C[2*child.m-1]
-	child.C[2*child.m-1] = nil
+	newChild.C[child.t-1] = child.C[2*child.t-1]
+	child.C[2*child.t-1] = nil
 
-	//if !child.isLeaf {
-	//	for j := 0; j < child.m; j++ {
-	//		newChild.C[j] = child.C[j+child.m]
-	//		child.C[j+child.m] = nil
+	//if !child.leaf {
+	//	for j := 0; j < child.t; j++ {
+	//		newChild.C[j] = child.C[j+child.t]
+	//		child.C[j+child.t] = nil
 	//	}
 	//}
 
@@ -97,33 +113,23 @@ func (node *Node[T]) splitChild(i int, child *Node[T]) {
 		node.K[j+1] = node.K[j]
 		j--
 	}
-	// adding new key on index next to current child/key
-	node.K[i] = child.K[child.m-1]
+	// moving last key on child to parent at index i
+	node.K[i] = child.K[child.t-1]
 	node.n++
+	child.K[child.t-1] = zero
 	child.n--
 
-	//nInit := child.n
-	//child.n = child.m - 1
-
-	// check if casting is needed for explicitly defined ordered types
-	//for k := child.n; k < nInit; k++ {
-	//	keyDataType := reflect.TypeOf(child.K[k])
-	//	if keyDataType == reflect.TypeOf(0) {
-	//		child.K[k] = any(0).(T) // Cast 0 to type T
-	//	} else if keyDataType == reflect.TypeOf("") {
-	//		child.K[k] = any("").(T) // Cast "" to type T
-	//	}
-	//}
+	//child.n = child.t - 1
 }
 
 func (node *Node[T]) traverseRec(keys []T) {
 	for i := 0; i < node.n; i++ {
-		if !node.isLeaf {
+		if !node.leaf {
 			node.C[i].traverseRec(keys)
 		}
 		keys = append(keys, node.K[i])
 	}
-	if !node.isLeaf {
+	if !node.leaf {
 		node.C[node.n].traverseRec(keys)
 	}
 }
@@ -140,7 +146,7 @@ func (node *Node[T]) searchRec(key T) (error, *Node[T], int) {
 			break
 		}
 	}
-	if node.isLeaf {
+	if node.leaf {
 		return errors.New("key does not exist in btree"), nil, -1
 	} else {
 		return node.C[i].searchRec(key)
@@ -159,20 +165,20 @@ func (node *Node[T]) deleteRec(key T) (error, *Node[T], int, bool) {
 			break
 		}
 	}
-	if node.isLeaf {
+	if node.leaf {
 		return errors.New("key does not exist in btree"), nil, -1, false
 	} else {
 		err, child, j, res := node.C[i].deleteRec(key)
 		if err != nil {
 			return err, child, j, res
 		} else if res == true {
-			if child.n < child.m-1 {
+			if child.n < child.t-1 {
 				node.fixUnderflow(i, child)
 			}
 			return nil, node, i, true
 		} else {
-			if child.isLeaf {
-				if child.n > child.m-1 {
+			if child.leaf {
+				if child.n > child.t-1 {
 					child.deleteFromLeaf(j)
 				} else {
 					node.deleteFromLeafWithTMinus1Keys(i, child, j)
@@ -191,7 +197,7 @@ func (node *Node[T]) deleteRec(key T) (error, *Node[T], int, bool) {
 					largest = false
 				}
 				child.K[j] = val
-				if C.n > C.m-1 {
+				if C.n > C.t-1 {
 					if largest == true {
 						C.deleteFromLeaf(C.n - 1)
 					} else {
@@ -265,12 +271,12 @@ func (node *Node[T]) fixUnderflow(i int, child *Node[T]) {
 		child.n++
 		sibling := node.C[i-1]
 
-		if sibling.n > sibling.m-1 {
+		if sibling.n > sibling.t-1 {
 			node.K[i-1] = sibling.K[sibling.n-1]
 
 			P, C, val := child.findLargestKeyInSubtreeRec(sibling.C[sibling.n-1])
 			sibling.K[sibling.n-1] = val
-			if C.n > C.m-1 {
+			if C.n > C.t-1 {
 				C.deleteFromLeaf(C.n - 1)
 			} else {
 				P.deleteFromLeafWithTMinus1Keys(P.n-1, C, C.n-1)
@@ -306,7 +312,7 @@ func (node *Node[T]) fixUnderflow(i int, child *Node[T]) {
 		child.n++
 		sibling := node.C[i+1]
 
-		if sibling.n > sibling.m-1 {
+		if sibling.n > sibling.t-1 {
 			node.K[i] = sibling.K[0]
 			for k := 0; k < sibling.n-1; k++ {
 				sibling.K[k] = sibling.K[k+1]
@@ -348,7 +354,7 @@ func (node *Node[T]) fixUnderflow(i int, child *Node[T]) {
 //func (node *Node[T]) fixChildUnderflow(i int, foundNode *Node[T], sibling *Node[T], rightSibling bool) {
 //	if rightSibling {
 //		foundNode.K[foundNode.n-1] = node.K[i]
-//		if sibling.n > sibling.m-1 {
+//		if sibling.n > sibling.t-1 {
 //			node.K[i] = sibling.K[0]
 //			for K := 0; K < sibling.n-1; K++ {
 //				sibling.K[K] = sibling.K[K+1]
@@ -386,7 +392,7 @@ func (node *Node[T]) fixUnderflow(i int, child *Node[T]) {
 //		}
 //	} else {
 //		foundNode.K[0] = node.K[i-1]
-//		if sibling.n > sibling.m-1 {
+//		if sibling.n > sibling.t-1 {
 //			node.K[i-1] = sibling.K[sibling.n-1]
 //
 //			keyDataType := reflect.TypeOf(sibling.K[sibling.n-1])

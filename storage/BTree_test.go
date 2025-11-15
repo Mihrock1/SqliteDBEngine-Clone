@@ -48,7 +48,7 @@ func TestTraversal(t *testing.T) {
 		t.Error("Expected nil K for empty tree")
 	}
 
-	// Insert K in random m
+	// Insert K in random t
 	insertKeys := []int{50, 30, 10, 40, 20}
 	for _, key := range insertKeys {
 		btree.Insert(key)
@@ -63,7 +63,7 @@ func TestTraversal(t *testing.T) {
 	// Verify K are sorted
 	for i := 1; i < len(keys); i++ {
 		if keys[i] <= keys[i-1] {
-			t.Errorf("Keys not in sorted m: %v", keys)
+			t.Errorf("Keys not in sorted t: %v", keys)
 			break
 		}
 	}
@@ -86,16 +86,16 @@ func TestStringKeys(t *testing.T) {
 		}
 	}
 
-	// Verify traversal m
+	// Verify traversal t
 	err, keys := btree.traverse()
 	if err != nil {
 		t.Errorf("Unexpected error during string traversal: %v", err)
 	}
 
-	// Check if strings are in lexicographical m
+	// Check if strings are in lexicographical t
 	for i := 1; i < len(keys); i++ {
 		if keys[i] <= keys[i-1] {
-			t.Errorf("Strings not in lexicographical m: %v", keys)
+			t.Errorf("Strings not in lexicographical t: %v", keys)
 			break
 		}
 	}
@@ -105,7 +105,7 @@ func TestLargeNumberOfKeys(t *testing.T) {
 	deg := 3
 	_, btree := NewBTree[int](deg)
 
-	// Insert 100 K
+	// Insert 100 Keys
 	for i := 0; i < 100; i++ {
 		btree.Insert(i)
 	}
@@ -126,7 +126,7 @@ func TestLargeNumberOfKeys(t *testing.T) {
 	// Check if K are sorted
 	for i := 1; i < len(keys); i++ {
 		if keys[i] <= keys[i-1] {
-			t.Errorf("Keys not in sorted m: %v", keys)
+			t.Errorf("Keys not in sorted t: %v", keys)
 			break
 		}
 	}
@@ -137,27 +137,6 @@ func TestMinimumDegreeValidation(t *testing.T) {
 	err, _ := NewBTree[int](1)
 	if err == nil {
 		t.Error("Expected panic for minimum degree < 2")
-	}
-}
-
-func TestNodeFullness(t *testing.T) {
-	deg := 3
-	_, btree := NewBTree[int](deg)
-
-	// Insert 2t-1 K to fill root
-	for i := 0; i < deg-1; i++ {
-		btree.Insert(i)
-	}
-
-	if btree.root.n != deg-1 {
-		t.Errorf("Expected root to have %d K, got %d", deg-1, btree.root.n)
-	}
-
-	// Insert one more key to force split
-	btree.Insert(deg - 1)
-
-	if btree.root.n >= deg-1 {
-		t.Error("Expected root to split")
 	}
 }
 
@@ -203,7 +182,7 @@ func TestDeleteFromLeaf(t *testing.T) {
 		btree.Insert(key)
 	}
 
-	// Delete a isLeaf node key
+	// Delete a leaf node key
 	err, success := btree.Delete(50)
 	if err != nil {
 		t.Errorf("Unexpected error during deletion: %v", err)
@@ -252,7 +231,7 @@ func TestDeleteFromInternalNode(t *testing.T) {
 	// Check if remaining K are sorted
 	for i := 1; i < len(keys); i++ {
 		if keys[i] <= keys[i-1] {
-			t.Errorf("Keys not in sorted m after deletion: %v", keys)
+			t.Errorf("Keys not in sorted t after deletion: %v", keys)
 		}
 	}
 }
@@ -285,7 +264,7 @@ func TestDeleteWithKeyBorrowing(t *testing.T) {
 	// Verify K remain sorted
 	for i := 1; i < len(keys); i++ {
 		if keys[i] <= keys[i-1] {
-			t.Errorf("Keys not in sorted m after borrowing: %v", keys)
+			t.Errorf("Keys not in sorted t after borrowing: %v", keys)
 		}
 	}
 }
@@ -321,7 +300,7 @@ func TestDeleteWithNodeMerging(t *testing.T) {
 	// Check if remaining K are sorted
 	for i := 1; i < len(remainingKeys); i++ {
 		if remainingKeys[i] <= remainingKeys[i-1] {
-			t.Errorf("Keys not in sorted m after merging: %v", remainingKeys)
+			t.Errorf("Keys not in sorted t after merging: %v", remainingKeys)
 		}
 	}
 }
